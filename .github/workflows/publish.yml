@@ -1,0 +1,46 @@
+name: Publish GitHub Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Resolve release version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.-]+)?$ ]]; then
+            echo "Release tags must be in the form v1.0.0 or v1.0.0-preview.1" >&2
+            exit 1
+          fi
+          echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Restore
+        run: dotnet restore Hangfire.LiteDB.sln
+      - name: Build
+        run: dotnet build Hangfire.LiteDB.sln -c Release --no-restore -p:Version=${{ env.PACKAGE_VERSION }}
+      - name: Test
+        run: dotnet test test/Hangfire.LiteDB.Test/Hangfire.LiteDB.Test.csproj -c Release --no-build -p:Version=${{ env.PACKAGE_VERSION }}
+      - name: Pack
+        run: dotnet pack src/Hangfire.LiteDB/Hangfire.LiteDB.csproj -c Release --no-build -p:Version=${{ env.PACKAGE_VERSION }} --output ./artifacts
+      - name: Push to GitHub Packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg \
+            --source "https://nuget.pkg.github.com/laim/index.json" \
+            --api-key "$GH_TOKEN" \
+            --skip-duplicate
