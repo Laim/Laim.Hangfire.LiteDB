@@ -1,58 +1,114 @@
-# Hangfire.LiteDB
-[![NuGet Badge](https://buildstats.info/nuget/Hangfire.LiteDB)](https://www.nuget.org/packages/Hangfire.LiteDB/) [![MyGet Pre Release](https://img.shields.io/myget/hangfire-litedb/vpre/Hangfire.LiteDB.svg)](https://www.myget.org/feed/hangfire-litedb/package/nuget/Hangfire.LiteDB)
-## Build Status
-`Platform` | `Master`
---- | ---
-**Windows** | [![Build status](https://ci.appveyor.com/api/projects/status/yre8t19rdaxax7e6?svg=true)](https://ci.appveyor.com/project/codeyu/hangfire-litedb)
-**Linux / OS X** | [![Build Status](https://travis-ci.org/codeyu/Hangfire.LiteDB.svg?branch=master)](https://travis-ci.org/codeyu/Hangfire.LiteDB)
+# Laim.Hangfire.LiteDB
 
-## Overview
+A maintained fork of [Hangfire.LiteDB](https://github.com/codeyu/Hangfire.LiteDB), providing LiteDB job storage for [Hangfire](https://www.hangfire.io/).
 
-LiteDB job storage for Hangfire
+**NuGet package:** `Laim.Hangfire.LiteDB`
 
-## Usage
+**Compatibility:** The assembly name and C# namespace remain `Hangfire.LiteDB`. Replace the old **package reference**, not your `using Hangfire.LiteDB;` statements or existing `UseLiteDbStorage(...)` calls.
 
-This is how you connect to an litedb instance
-```csharp
-GlobalConfiguration.Configuration.UseLiteDbStorage();
+## Dependencies and targets
+
+| Component | Version / target |
+| --- | --- |
+| Library target | .NET Standard 2.0 (usable from .NET 10) |
+| Hangfire.Core | 1.8.25 |
+| LiteDB | 5.0.21 |
+| Newtonsoft.Json | 13.0.4 |
+| Sample applications and tests | .NET 10 |
+
+This fork targets Hangfire 1.8 and removes the obsolete .NET Framework 4.5 / .NET Core 2.x build targets.
+
+## Installation
+
+Install the package from [NuGet.org](https://www.nuget.org/) using the .NET CLI:
+
+```powershell
+dotnet add package Laim.Hangfire.LiteDB
 ```
 
-To enqueue a background job you must have the following in the code somewhere at least once or the background job queue will not process
-```csharp
-var client = new BackgroundJobServer();
-\\then you can do this, which runs once
-BackgroundJob.Enqueue(() => Console.WriteLine("Background Job: Hello, world!"));
+Or add the package reference directly to your project file:
+
+```xml
+<PackageReference Include="Laim.Hangfire.LiteDB" Version="1.0.0" />
 ```
 
-[**Delayed tasks**](http://docs.hangfire.io/en/latest/users-guide/background-methods/calling-methods-with-delay.html)
+If you currently use the original `Hangfire.LiteDB` package, remove it before installing `Laim.Hangfire.LiteDB`. **Do not reference both packages**, as they share the same assembly name.
 
-Scheduled background jobs are being executed only after given amount of time.
+No changes to your existing `using Hangfire.LiteDB;` statements or `UseLiteDbStorage(...)` calls are needed.
 
-```csharp
-BackgroundJob.Schedule(() => Console.WriteLine("Reliable!"), TimeSpan.FromDays(7));
-```
+## Configure Hangfire
 
-[**Recurring tasks**](http://docs.hangfire.io/en/latest/users-guide/background-methods/performing-recurrent-tasks.html)
+> [!TIP]
+If this is your first time using Laim.Hangfire.LiteDB OR Hangfire.LiteDB in ASP.NET Core, I wrote a tutorial a while ago. [You can find it here](https://laim.scot/blog/hangfire-aspdotnet-core-8-and-10-sqlite)
 
-Recurring jobs were never been simpler, just call the following method to perform any kind of recurring task using the [CRON expressions](http://en.wikipedia.org/wiki/Cron#CRON_expression).
-
-```csharp
-RecurringJob.AddOrUpdate(() => Console.WriteLine("Transparent!"), Cron.Daily);
-```
-
-## Continuations
-
-Continuations allow you to define complex workflows by chaining multiple background jobs together.
+In ASP.NET Core:
 
 ```csharp
-var id = BackgroundJob.Enqueue(() => Console.WriteLine("Hello, "));
-BackgroundJob.ContinueWith(id, () => Console.WriteLine("world!"));
+using Hangfire;
+using Hangfire.LiteDB;
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseLiteDbStorage("app/hangfire.db"); // You can make this whatever you want and store the string however you want, i.e appsettings.json 
+});
+
+builder.Services.AddHangfireServer();
 ```
 
-## License
+Enqueue and schedule jobs through Hangfire as usual:
 
-Hangfire.LiteDB is released under the MIT License.
+```csharp
+BackgroundJob.Enqueue(() => Console.WriteLine("Hello from Hangfire"));
+BackgroundJob.Schedule(() => Console.WriteLine("Later"), TimeSpan.FromDays(1));
 
-## Known Bugs
 
-* ~~UTC Time Zone and Local Time Zone is  confusing.~~
+var recurringJobManager = app.ApplicationServices.GetRequiredService<IRecurringJobManager>();
+
+// run the job every minute, if you don't understand cron you can use https://cronguru.com
+// reconisiable-job-id shows up in the hangfire dashboard, so name it something you'll recognize such as
+// weekly-db-backup, monthly-statistics-report, etc.
+recurringJobManager.AddOrUpdate("recognizable-job-id", () => Test(), "* * * * *");
+```
+
+You can also enable the Hangfire Dashboard using the below, it is recommended to wrap this in an [Authentication](https://laim.scot/blog/hangfire-aspdotnet-core-8-and-10-sqlite#optional-hangfire-dashboard), as it is unauthenticated by default.
+
+```csharp
+// This is unauthenticated by default, anyone will be able to view and run jobs
+//  if you do not put an AuthorizationFilter infront of it!
+app.UseHangfireDashboard();
+```
+
+For console applications, explicitly instantiate `BackgroundJobServer` (see `samples/ConsoleSample`).
+## Migration and operational considerations
+
+- **Back up the existing LiteDB database** before switching packages. This fork retains the storage schema, assembly name, default table prefixes and public API, but a migration must be tested with your actual data and workload.
+
+- Hangfire 1.8 changes some scheduling and serialization defaults. See the [official Hangfire 1.8 upgrade guide](https://docs.hangfire.io/en/latest/upgrade-guides/upgrading-to-hangfire-1.8.html). Avoid simultaneously enabling new 1.8 data-compatibility/serializer settings during the package swap; change them separately and test existing jobs.
+
+- A Hangfire distributed-lock timeout must report the **lock resource**, not a formatted diagnostic string. The provider contains this required Hangfire 1.8 compatibility adjustment.
+
+- LiteDB is a file-based store. Its performance, single-file concurrency and multi-process access characteristics are different from SQL Server/Redis. Upgrading dependencies does **not** guarantee that existing storage-provider issues (e.g., queue visibility, stuck locks or monitoring API coverage) are resolved. Test job processing, retries, recurring jobs, locks, dashboard queries and shutdown/restart behaviour before production rollout.
+
+- **Do not run the old and new package in different server instances against the same database** until you have tested that exact deployment arrangement. Stop workers and take a backup during the migration.
+
+## Build and test
+
+Install the **.NET 10 SDK**.
+
+```powershell
+# Build all projects, including samples
+dotnet restore Hangfire.LiteDB.sln
+dotnet build Hangfire.LiteDB.sln --configuration Release --no-restore
+
+# Run the existing test suite
+dotnet test test/Hangfire.LiteDB.Test/Hangfire.LiteDB.Test.csproj --configuration Release --no-build
+
+# Check known NuGet advisories (including transitive dependencies)
+dotnet list Hangfire.LiteDB.sln package --vulnerable --include-transitive
+```
+
+## Attribution and license
+
+Forked from [codeyu/Hangfire.LiteDB](https://github.com/codeyu/Hangfire.LiteDB) and distributed under the MIT License. See [`LICENSE`](LICENSE).

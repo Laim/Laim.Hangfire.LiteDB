@@ -1,68 +1,31 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' ">
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>0.4.1</Version>
-    <authors>codeyu</authors>
+    <!-- Keep the assembly/namespace unchanged so consuming applications do not need code changes. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Hangfire.LiteDB</AssemblyName>
-    <PackageId>Hangfire.LiteDB</PackageId>
+    <PackageId>Laim.Hangfire.LiteDB</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>codeyu;Laim</Authors>
+    <Owners>laim</Owners>
+    <Title>Laim.Hangfire.LiteDB</Title>
+    <Description>LiteDB storage provider for Hangfire. Maintained fork of Hangfire.LiteDB.</Description>
+    <PackageTags>Hangfire;LiteDB;Storage;BackgroundJobs</PackageTags>
+    <Copyright>Copyright (c) 2017 zhu yu; Copyright (c) 2026 Laim McKenzie</Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/laim/Laim.Hangfire.LiteDB</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/laim/Laim.Hangfire.LiteDB</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS0618</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Copyright>Copyright 2020 © codeyu</Copyright>
-    <title>Hangfire LiteDB Storage</title>
-    <owners>codeyu</owners>
-    <Description>LiteDB storage implementation for Hangfire (background job system for ASP.NET applications).</Description>
-    <PackageTags>Hangfire AspNet OWIN LiteDB Long-Running Background Fire-And-Forget Delayed Recurring Tasks Jobs Scheduler Threading Queues</PackageTags>
-    <PackageReleaseNotes>
-      0.4.1
-      - Fix memory leak  @danzhik
-    </PackageReleaseNotes>
-    <License>https://github.com/codeyu/Hangfire.LiteDB/master/LICENSE</License>
-    <PackageProjectUrl>https://github.com/codeyu/Hangfire.LiteDB</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/codeyu/Hangfire.LiteDB</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-  </ItemGroup>
-  
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <DefineConstants>$(DefineConstants);NetCore</DefineConstants>
-  </PropertyGroup>
-  
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' OR '$(TargetFramework)' == 'net451' OR '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <PackageReference Include="System.Data.Common" Version="4.3.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.3.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
-  </ItemGroup>
-    
   <ItemGroup>
-    <PackageReference Include="HangFire.Core" Version="1.7.16" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="LiteDB" Version="5.0.9" />
+    <None Include="../../README.md" Pack="true" PackagePath="" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="" />
+    <PackageReference Include="Hangfire.Core" Version="1.8.25" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
 </Project>

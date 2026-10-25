@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Hangfire.LiteDB.Entities;
@@ -182,7 +182,7 @@ namespace Hangfire.LiteDB
 
                 if (!isLockAcquired)
                 {
-                    throw new DistributedLockTimeoutException($"Could not place a lock on the resource \'{_resource}\': The lock request timed out.");
+                    throw new DistributedLockTimeoutException(_resource);
                 }
             }
             catch (DistributedLockTimeoutException)
