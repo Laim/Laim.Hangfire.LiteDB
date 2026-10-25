@@ -106,6 +106,7 @@ namespace Hangfire.LiteDB
         /// 
         /// </summary>
         /// <returns></returns>
+        [Obsolete("Use GetStorageWideProcesses or GetServerRequiredProcesses instead.")]
         public override IEnumerable<IServerComponent> GetComponents()
         {
             yield return new ExpirationManager(this, _storageOptions.JobExpirationCheckInterval);
