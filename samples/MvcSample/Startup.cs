@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Hangfire;
 using Hangfire.LiteDB;
@@ -18,17 +18,17 @@ namespace MvcSample
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
-            services.AddHangfire(t => t.UseLiteDbStorage(Configuration[key: "ConnectionStrings:Database"]));
+            services.AddControllersWithViews();
+            services.AddHangfire(configuration =>
+                configuration.UseLiteDbStorage(Configuration["ConnectionStrings:Database"]));
+            services.AddHangfireServer();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            if (env.EnvironmentName == "Development")
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -38,28 +38,50 @@ namespace MvcSample
             }
 
             app.UseStaticFiles();
-            // Add Hangfire Server and Dashboard support
-            app.UseHangfireServer();
+            app.UseRouting();
+
+            // Demo only: the Hangfire dashboard is not authenticated here.
+            // Do not expose this sample publicly without adding authorisation.
             app.UseHangfireDashboard();
 
-            // Run once
-            BackgroundJob.Enqueue(() => Console.WriteLine("Background Job: Hello, world!"));
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
 
+            // these are fire and forget, they run once on startup and then never again
+            // i.e if you wanted to send an email on startup that said "XYZ is booted" 
+            // or something like that
+            BackgroundJob.Enqueue(() => Console.WriteLine("Background Job: Hello, world!"));
             BackgroundJob.Enqueue(() => Test());
 
-            // Run every minute
-            RecurringJob.AddOrUpdate(() => Test(), Cron.Minutely);
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
-            });
+            // depending on your workflow, it may be worth wrapping recurring jobs in a if statement
+            // so that they only run in production and don't run in dev
+            // example:
+            //if(env.IsDevelopment())
+            //{
+            //    var recurringJobManager = app.ApplicationServices.GetRequiredService<IRecurringJobManager>();
+            //    recurringJobManager.AddOrUpdate("prod-database-backup", () => Test(), "* * * * *");
+            //}
+
+            var recurringJobManager = app.ApplicationServices.GetRequiredService<IRecurringJobManager>();
+
+            // run the job every minute, if you don't understand cron you can use https://cronguru.com
+            // reconisiable-job-id shows up in the hangfire dashboard, so name it something you'll recognize such as
+            // weekly-db-backup, monthly-statistics-report, etc.
+            recurringJobManager.AddOrUpdate("recognizable-job-id", () => Test(), "* * * * *");
+
         }
 
         public static int X;
 
+        // when this runs, it'll try twice before it gets nuked
         [AutomaticRetry(Attempts = 2, LogEvents = true, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
-        public static void Test() => Debug.WriteLine($"{X++} Cron Job: Hello, world!");//throw new ArgumentException("fail");
+        public static void Test()
+        {
+            Debug.WriteLine($"{X++} Cron Job: Hello, world!");
+        }
     }
 }
