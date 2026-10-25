@@ -1,4 +1,4 @@
-name: Publish GitHub Package
+name: Publish to NuGet.org
 
 on:
   release:
@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  packages: write
+  id-token: write
 
 jobs:
   publish:
@@ -36,11 +36,23 @@ jobs:
         run: dotnet test test/Hangfire.LiteDB.Test/Hangfire.LiteDB.Test.csproj -c Release --no-build -p:Version=${{ env.PACKAGE_VERSION }}
       - name: Pack
         run: dotnet pack src/Hangfire.LiteDB/Hangfire.LiteDB.csproj -c Release --no-build -p:Version=${{ env.PACKAGE_VERSION }} --output ./artifacts
-      - name: Push to GitHub Packages
+      - name: Check NuGet.org username
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_USER: ${{ vars.NUGET_USER }}
         run: |
-          dotnet nuget push ./artifacts/*.nupkg \
-            --source "https://nuget.pkg.github.com/laim/index.json" \
-            --api-key "$GH_TOKEN" \
-            --skip-duplicate
+          if [[ -z "$NUGET_USER" ]]; then
+            echo "Set the NUGET_USER GitHub Actions repository variable to your NuGet.org username." >&2
+            exit 1
+          fi
+      - name: NuGet login (trusted publishing)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Push to NuGet.org
+        env:
+          NUGET_TEMP_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        shell: bash
+        run: |
+          dotnet nuget push "./artifacts/Laim.Hangfire.LiteDB.${PACKAGE_VERSION}.nupkg" --source "https://api.nuget.org/v3/index.json" --api-key "$NUGET_TEMP_API_KEY" --skip-duplicate
